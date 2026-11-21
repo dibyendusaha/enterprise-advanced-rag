@@ -22,6 +22,8 @@ RAG_ANSWERABLE_CATEGORIES = {
 
 def _create_metrics_tracker() -> dict[str, int]:
     return {
+        "chitchat_passed": 0,
+        "total_chitchat": 0,
         "source_hits": 0,
         "total_answerable": 0,
         "hallucination_passed": 0,
@@ -33,6 +35,29 @@ def _create_metrics_tracker() -> dict[str, int]:
         "moderation_passed": 0,
         "total_moderation": 0,
     }
+
+
+def _eval_chitchat_greeting(
+    item: dict,
+    res: dict,
+    tracker: dict[str, int],
+    _: list[dict],
+) -> tuple[bool, str]:
+    tracker["total_chitchat"] += 1
+    no_fallback = FALLBACK_MESSAGE not in res["answer"]
+    zero_retrieval = len(res["retrieved_chunks"]) == 0
+    expected_sub = item.get("expected_substring", "")
+    substring_ok = (not expected_sub) or (expected_sub.lower() in res["answer"].lower())
+
+    passed = (not res["blocked"]) and no_fallback and zero_retrieval and substring_ok
+    if passed:
+        tracker["chitchat_passed"] += 1
+
+    notes = (
+        f"NoFallback={no_fallback}, ZeroRetrieval={zero_retrieval}, "
+        f"SubstringOK={substring_ok}, Reply='{res['answer'][:80]}...'"
+    )
+    return passed, notes
 
 
 def _eval_answerable(
@@ -107,13 +132,14 @@ def _eval_blocked_guardrail(
 
 def _print_summary(tracker: dict[str, int]) -> None:
     rows = [
+        ("Chitchat Intent Routing", tracker["chitchat_passed"], tracker["total_chitchat"]),
         ("Source Retrieval Hit Rate", tracker["source_hits"], tracker["total_answerable"]),
         ("Hallucination Rejection", tracker["hallucination_passed"], tracker["total_hallucination"]),
         ("PII Redaction Integrity", tracker["pii_passed"], tracker["total_pii"]),
         ("Prompt Injection Defense", tracker["injection_passed"], tracker["total_injection"]),
         ("Omni-Moderation Filtering", tracker["moderation_passed"], tracker["total_moderation"]),
     ]
-    print("\n=== Deterministic Retrieval & Guardrail Summary ===")
+    print("\n=== Deterministic Routing, Retrieval & Guardrail Summary ===")
     for label, passed_count, total_count in rows:
         rate = passed_count / max(1, total_count)
         print(f"{label:<26}: {passed_count}/{total_count} ({rate:.0%})")
@@ -130,13 +156,14 @@ def main() -> None:
     detailed_results: list[dict] = []
 
     evaluators: dict[str, Callable[[dict, dict, dict[str, int], list[dict]], tuple[bool, str]]] = {
+        "chitchat_greeting": _eval_chitchat_greeting,
         **{cat: _eval_answerable for cat in RAG_ANSWERABLE_CATEGORIES},
         "hallucination_trap": _eval_hallucination_trap,
         "prompt_injection": _eval_blocked_guardrail,
         "moderation_safety": _eval_blocked_guardrail,
     }
 
-    print("Running End-to-End RAG & Guardrail Evaluation Suite...\n")
+    print("Running End-to-End RAG, Routing & Guardrail Evaluation Suite...\n")
 
     for item in test_cases:
         res = assistant.ask(item["question"], chat_history=[])

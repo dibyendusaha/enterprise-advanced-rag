@@ -1,3 +1,5 @@
+from typing import Literal
+from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
@@ -12,11 +14,48 @@ FALLBACK_MESSAGE = (
 )
 
 
+class QueryIntent(BaseModel):
+    intent: Literal["CHITCHAT", "POLICY_QUERY"] = Field(
+        description=(
+            "Classify as 'CHITCHAT' ONLY for pure greetings, introductions, thanks, or questions "
+            "about what this assistant can do. Classify ANY factual question, policy inquiry, "
+            "benefit question, or domain query (even if unanswerable) as 'POLICY_QUERY'."
+        )
+    )
+
+
 class EnterpriseKnowledgeAssistant:
     def __init__(self):
         self.llm = ChatOpenAI(model=LLM_MODEL, temperature=0.0)
         self.retriever = EnterpriseHybridRerankRetriever()
         self.guardrails = RAGGuardrails()
+
+        # Intent Router: separates greetings/introductions from knowledge queries
+        self.intent_llm = ChatOpenAI(model=LLM_MODEL, temperature=0.0).with_structured_output(
+            QueryIntent,
+            method="json_schema",
+            strict=True,
+        )
+        self.intent_prompt = ChatPromptTemplate.from_messages([
+            ("system",
+             "Classify the user's message.\n"
+             "- Return 'CHITCHAT' ONLY if the user is greeting, introducing themselves, saying thanks, "
+             "or asking about your general capabilities.\n"
+             "- Return 'POLICY_QUERY' for ANY question seeking facts, rules, limits, procedures, "
+             "IT help, HR benefits, or company details—even if it sounds unrelated to NexaCore."),
+            ("human", "{input}"),
+        ])
+
+        self.chitchat_prompt = ChatPromptTemplate.from_messages([
+            ("system",
+             "You are the NexaCore Enterprise Knowledge Assistant. Respond warmly and concisely to "
+             "greetings or introductions. Mention that you can answer questions about NexaCore's "
+             "Leave Policy, Travel & Expenses, IT Security/BYOD, Employee Benefits, and Code of Conduct. "
+             "Never invent company policies or facts."),
+            MessagesPlaceholder("chat_history"),
+            ("human", "{input}"),
+        ])
+        self.chitchat_chain = self.chitchat_prompt | self.llm | StrOutputParser()
 
         # Step 1: Contextualize follow-up queries using conversation history
         self.contextualize_prompt = ChatPromptTemplate.from_messages([
@@ -38,13 +77,18 @@ class EnterpriseKnowledgeAssistant:
              "1. Rely ONLY on facts explicitly stated in the CONTEXT. Do not use outside knowledge or extrapolate.\n"
              "2. Cite the exact source document name inline using brackets, e.g. [Leave_Policy.pdf].\n"
              "3. If the CONTEXT does not contain sufficient information to answer the question, respond ONLY with:\n"
-             f"{FALLBACK_MESSAGE}\n"
+             f'   "{FALLBACK_MESSAGE}"\n'
              "4. Keep answers structured, concise, and actionable.\n\n"
              "CONTEXT:\n{context}"),
             MessagesPlaceholder("chat_history"),
             ("human", "{input}"),
         ])
         self.answer_chain = self.qa_prompt | self.llm | StrOutputParser()
+
+    def _classify_intent(self, query: str) -> Literal["CHITCHAT", "POLICY_QUERY"]:
+        raw = (self.intent_prompt | self.intent_llm).invoke({"input": query})
+        parsed = raw if isinstance(raw, QueryIntent) else QueryIntent.model_validate(raw)
+        return parsed.intent
 
     @staticmethod
     def _format_docs_with_metadata(docs) -> str:
@@ -70,7 +114,6 @@ class EnterpriseKnowledgeAssistant:
 
         clean_query = input_check.sanitized_query
 
-        # Convert Streamlit message dicts to LangChain Message objects (keep last 6 turns)
         lc_history = []
         for msg in chat_history[-6:]:
             if msg["role"] == "user":
@@ -78,16 +121,30 @@ class EnterpriseKnowledgeAssistant:
             elif msg["role"] == "assistant":
                 lc_history.append(AIMessage(content=msg["content"]))
 
-        # 2. History-Aware Query Rewriting
-        if lc_history:
-            standalone_query = self.query_rewriter.invoke({
+        # 2. Intent Routing: handle greetings/introductions gracefully without retrieval
+        if self._classify_intent(clean_query) == "CHITCHAT":
+            greeting_reply = self.chitchat_chain.invoke({
                 "chat_history": lc_history,
                 "input": clean_query,
             })
-        else:
-            standalone_query = clean_query
+            return {
+                "answer": greeting_reply,
+                "standalone_query": "[CHITCHAT_BYPASS]",
+                "sources": [],
+                "retrieved_chunks": [],
+                "hybrid_candidate_count": 0,
+                "grounding_passed": True,
+                "blocked": False,
+            }
 
-        # 3. Hybrid Search + Cross-Encoder Reranking
+        # 3. History-Aware Query Rewriting
+        standalone_query = (
+            self.query_rewriter.invoke({"chat_history": lc_history, "input": clean_query})
+            if lc_history
+            else clean_query
+        )
+
+        # 4. Hybrid Search + OpenAI Reranking
         retrieval_output = self.retriever.retrieve_with_diagnostics(standalone_query)
         reranked_docs = retrieval_output["reranked_docs"]
 
@@ -97,20 +154,21 @@ class EnterpriseKnowledgeAssistant:
                 "standalone_query": standalone_query,
                 "sources": [],
                 "retrieved_chunks": [],
+                "hybrid_candidate_count": retrieval_output["hybrid_candidate_count"],
                 "grounding_passed": True,
                 "blocked": False,
             }
 
         context_str = self._format_docs_with_metadata(reranked_docs)
 
-        # 4. Grounded Answer Generation
+        # 5. Grounded Answer Generation
         draft_answer = self.answer_chain.invoke({
             "context": context_str,
             "chat_history": lc_history,
             "input": clean_query,
         })
 
-        # 5. Output Guardrails: OpenAI Moderation + Grounding Faithfulness Audit
+        # 6. Output Guardrails: OpenAI Moderation + Grounding Faithfulness Audit
         output_audit = self.guardrails.validate_output(context=context_str, answer=draft_answer)
         if not output_audit.passed:
             final_answer = (
@@ -135,9 +193,5 @@ class EnterpriseKnowledgeAssistant:
             "retrieved_chunks": reranked_docs,
             "hybrid_candidate_count": retrieval_output["hybrid_candidate_count"],
             "grounding_passed": output_audit.passed,
-            "moderation_max_score": max(
-                input_check.moderation.max_score,
-                output_audit.moderation.max_score,
-            ),
             "blocked": False,
         }

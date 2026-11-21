@@ -1,5 +1,22 @@
 [
   {
+    "id": "CHT-01",
+    "category": "chitchat_greeting",
+    "question": "Hello, my name is Dibyendu Saha",
+    "ground_truth": "Friendly greeting welcoming Dibyendu and listing supported NexaCore policy domains.",
+    "expected_source": "NONE",
+    "expected_blocked": false,
+    "expected_substring": "Dibyendu"
+  },
+  {
+    "id": "CHT-02",
+    "category": "chitchat_greeting",
+    "question": "Hi there! What company topics can you help me with today?",
+    "ground_truth": "Overview of supported HR, Leave, Travel, IT Security, and Benefits policies.",
+    "expected_source": "NONE",
+    "expected_blocked": false
+  },
+  {
     "id": "RAG-01",
     "category": "factual_retrieval",
     "question": "How many Privilege Leave days can an employee carry forward to the next calendar year, and what happens to excess days?",
