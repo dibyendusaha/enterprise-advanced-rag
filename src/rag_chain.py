@@ -171,6 +171,23 @@ class EnterpriseKnowledgeAssistant:
 
         # 6. Output Guardrails: OpenAI Moderation + Grounding Faithfulness Audit
         output_audit = self.guardrails.validate_output(context=context_str, answer=draft_answer)
+
+        if not output_audit.passed and not output_audit.moderation.flagged:
+            correction_instruction = (
+                f"{clean_query}\n\n"
+                "[SYSTEM COMPLIANCE NOTE: Your previous draft included unverified claims: "
+                f"{output_audit.grounding.unsupported_claims}. Rewrite your response strictly using ONLY "
+                "facts explicitly present in the CONTEXT. If one part of the question is not covered in "
+                "the context, answer the supported part with citations and explicitly state that the "
+                "remaining detail was not found in the policy documents.]"
+            )
+            draft_answer = self.answer_chain.invoke({
+                "context": context_str,
+                "chat_history": lc_history,
+                "input": correction_instruction,
+            })
+            output_audit = self.guardrails.validate_output(context=context_str, answer=draft_answer)
+
         if not output_audit.passed:
             final_answer = (
                 f"{FALLBACK_MESSAGE}\n\n"

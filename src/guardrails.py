@@ -61,10 +61,15 @@ class RAGGuardrails:
         )
         self.audit_prompt = ChatPromptTemplate.from_messages([
             ("system",
-             "You are a strict compliance auditor. Verify whether the ASSISTANT ANSWER is 100% grounded "
-             "in the RETRIEVED CONTEXT. If the assistant states that the information is not found in the "
-             "company documents, mark `is_grounded=True`. Flag any external facts, numbers, or assumptions "
-             "not explicitly present in the context."),
+             "You are a compliance auditor verifying whether the ASSISTANT ANSWER is factually supported "
+             "by the RETRIEVED CONTEXT.\n"
+             "Rules:\n"
+             "1. Synthesizing facts across two retrieved excerpts from different policy files is VALID "
+             "as long as each individual fact, number, and condition appears in the context.\n"
+             "2. If the assistant states that all or part of the information is not found in the company "
+             "documents, mark `is_grounded=True`.\n"
+             "3. Mark `is_grounded=False` ONLY if the answer invents numbers, rules, or entitlements not "
+             "present in the context."),
             ("human", "RETRIEVED CONTEXT:\n{context}\n\nASSISTANT ANSWER:\n{answer}")
         ])
 

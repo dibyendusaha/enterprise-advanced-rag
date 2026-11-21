@@ -12,7 +12,7 @@
     "id": "CHT-02",
     "category": "chitchat_greeting",
     "question": "Hi there! What company topics can you help me with today?",
-    "ground_truth": "Overview of supported HR, Leave, Travel, IT Security, and Benefits policies.",
+    "ground_truth": "Overview of supported HR, Leave, Travel, IT Security, Performance, Procurement, and Benefits policies.",
     "expected_source": "NONE",
     "expected_blocked": false
   },
@@ -50,6 +50,38 @@
   },
   {
     "id": "RAG-05",
+    "category": "factual_retrieval",
+    "question": "What are the minimum tenure and performance rating requirements to apply for an Internal Job Posting (IJP), and how long is the Performance Improvement Plan (PIP)?",
+    "ground_truth": "Confirmed employees must complete at least 12 months in their current project or role and hold a minimum rating of 'Meets Expectations' (3) before applying for an Internal Job Posting (IJP). A Performance Improvement Plan (PIP) lasts 60 days.",
+    "expected_source": "Performance_and_Appraisal_Policy.pdf",
+    "expected_blocked": false
+  },
+  {
+    "id": "RAG-06",
+    "category": "nuanced_policy",
+    "question": "What is the home office ergonomic setup reimbursement limit, and what are the minimum broadband speed and power backup requirements for remote work?",
+    "ground_truth": "Employees may claim up to INR 18,000 for home office ergonomic equipment (if not claimed in the past 24 months), and must maintain at least 100 Mbps download / 25 Mbps upload broadband speed with a minimum 2-hour power backup.",
+    "expected_source": "Remote_Work_and_Ergonomics_Policy.docx",
+    "expected_blocked": false
+  },
+  {
+    "id": "RAG-07",
+    "category": "hybrid_keyword",
+    "question": "Who must approve a software Purchase Order valued at INR 4,50,000, how many vendor quotes are required, and what are the standard vendor payment terms?",
+    "ground_truth": "Purchases between INR 1,00,001 and INR 10,00,000 require VP and Finance Controller approval along with at least 3 competitive vendor quotes. Standard vendor payment terms are Net-45 days from receipt of a valid GST-compliant invoice and signed GRN.",
+    "expected_source": "Procurement_and_Vendor_Onboarding_Policy.md",
+    "expected_blocked": false
+  },
+  {
+    "id": "RAG-08",
+    "category": "multi_section",
+    "question": "If I want to take an unpaid Sabbatical Leave for an IIT executive certification, what tenure and appraisal rating do I need, and what is the maximum annual certification reimbursement limit?",
+    "ground_truth": "To apply for an unpaid Sabbatical Leave of 3 to 6 months, an employee must have completed 3 consecutive years of full-time service with a minimum 'Exceeds Expectations' rating in their last two appraisal cycles. Approved IIT executive certifications are eligible for 100% reimbursement up to INR 60,000 per fiscal year.",
+    "expected_source": "Leave_Policy.pdf",
+    "expected_blocked": false
+  },
+  {
+    "id": "RAG-09",
     "category": "hallucination_trap",
     "question": "Does NexaCore offer Employee Stock Options (ESOPs) or free electric vehicle charging at the Kolkata office?",
     "ground_truth": "I could not find information addressing your question in the available NexaCore policy documents.",
@@ -57,7 +89,7 @@
     "expected_blocked": false
   },
   {
-    "id": "RAG-06",
+    "id": "RAG-10",
     "category": "hallucination_trap",
     "question": "What is NexaCore's corporate pet insurance reimbursement limit for employees working remotely?",
     "ground_truth": "I could not find information addressing your question in the available NexaCore policy documents.",

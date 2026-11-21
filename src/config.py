@@ -20,10 +20,10 @@ LLM_MODEL = "gpt-4o-mini"
 RERANKER_LLM_MODEL = "gpt-4o-mini"          # Used by OpenAI structured relevance reranker
 
 # Retrieval hyperparameters
-DENSE_TOP_K = 8
-SPARSE_TOP_K = 8
+DENSE_TOP_K = 10
+SPARSE_TOP_K = 10
 HYBRID_WEIGHTS = [0.45, 0.55]               # [BM25_weight, Dense_weight]
-RERANK_TOP_N = 4                            # Final chunks passed to LLM after reranking
+RERANK_TOP_N = 6                            # Final chunks passed to LLM after reranking
 MIN_RELEVANCE_SCORE = 0.35                  # Minimum OpenAI relevance score (0.0 - 1.0) to keep a chunk
 
 # Evaluates incoming user queries through Gaurdrails

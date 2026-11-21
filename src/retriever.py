@@ -101,8 +101,9 @@ class OpenAIReranker(BaseDocumentCompressor):
         prompt = ChatPromptTemplate.from_messages([
             ("system",
              "You are a precision search reranker for an enterprise policy assistant. "
-             "Score each candidate passage from 0.0 to 1.0 based on how directly and accurately "
-             "it helps answer the user's search query. Return a score for every candidate index."),
+             "If the user's query asks multiple sub-questions spanning different policies, score a passage "
+             "high (0.75 - 1.0) if it directly answers ANY sub-question in the query. "
+             "Score 0.0 if the passage is unrelated. Return a score for every candidate index."),
             ("human", "QUERY: {query}\n\nCANDIDATE PASSAGES:\n{candidates}")
         ])
 
