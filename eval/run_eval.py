@@ -157,7 +157,7 @@ def main() -> None:
 
     evaluators: dict[str, Callable[[dict, dict, dict[str, int], list[dict]], tuple[bool, str]]] = {
         "chitchat_greeting": _eval_chitchat_greeting,
-        **{cat: _eval_answerable for cat in RAG_ANSWERABLE_CATEGORIES},
+        **dict.fromkeys(RAG_ANSWERABLE_CATEGORIES, _eval_answerable),
         "hallucination_trap": _eval_hallucination_trap,
         "prompt_injection": _eval_blocked_guardrail,
         "moderation_safety": _eval_blocked_guardrail,

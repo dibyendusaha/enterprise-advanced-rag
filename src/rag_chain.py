@@ -12,6 +12,7 @@ FALLBACK_MESSAGE = (
     "I could not find information addressing your question in the available NexaCore policy documents. "
     "Please verify with HR or IT Support directly if this covers a specialized exception."
 )
+INPUT_VARIABLE = "{input}"
 
 
 class QueryIntent(BaseModel):
@@ -43,7 +44,7 @@ class EnterpriseKnowledgeAssistant:
              "or asking about your general capabilities.\n"
              "- Return 'POLICY_QUERY' for ANY question seeking facts, rules, limits, procedures, "
              "IT help, HR benefits, or company details—even if it sounds unrelated to NexaCore."),
-            ("human", "{input}"),
+            ("human", INPUT_VARIABLE),
         ])
 
         self.chitchat_prompt = ChatPromptTemplate.from_messages([
@@ -53,7 +54,7 @@ class EnterpriseKnowledgeAssistant:
              "Leave Policy, Travel & Expenses, IT Security/BYOD, Employee Benefits, and Code of Conduct. "
              "Never invent company policies or facts."),
             MessagesPlaceholder("chat_history"),
-            ("human", "{input}"),
+            ("human", INPUT_VARIABLE),
         ])
         self.chitchat_chain = self.chitchat_prompt | self.llm | StrOutputParser()
 
@@ -64,7 +65,7 @@ class EnterpriseKnowledgeAssistant:
              "standalone search query that includes all necessary context (such as policy names or topics "
              "discussed earlier). Do NOT answer the question. If it is already standalone, return it unchanged."),
             MessagesPlaceholder("chat_history"),
-            ("human", "{input}"),
+            ("human", INPUT_VARIABLE),
         ])
         self.query_rewriter = self.contextualize_prompt | self.llm | StrOutputParser()
 
@@ -81,7 +82,7 @@ class EnterpriseKnowledgeAssistant:
              "4. Keep answers structured, concise, and actionable.\n\n"
              "CONTEXT:\n{context}"),
             MessagesPlaceholder("chat_history"),
-            ("human", "{input}"),
+            ("human", INPUT_VARIABLE),
         ])
         self.answer_chain = self.qa_prompt | self.llm | StrOutputParser()
 
