@@ -1,0 +1,77 @@
+# --- Secrets & Environment Variables ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.yaml
+credentials.json
+
+# --- Virtual Environments ---
+.venv/
+venv/
+env/
+ENV/
+.conda/
+
+# --- Python Cache & Build Artifacts ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- RAG Vector Stores & Local Databases ---
+# ChromaDB, FAISS, Qdrant, LanceDB, SQLite
+chroma_db/
+chroma/
+faiss_index/
+qdrant_storage/
+lancedb/
+vectorstore/
+*.sqlite3
+*.db
+*.faiss
+*.pkl
+
+# --- Model & Embedding Caches ---
+.cache/
+huggingface/
+nltk_data/
+tiktoken_cache/
+models/
+*.bin
+*.safetensors
+*.gguf
+
+# --- Data & Documents (Optional: keep small sample data, ignore large dumps) ---
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/*.md
+!data/*.pdf
+!data/*.docx
+*.csv
+*.parquet
+*.jsonl
+
+# --- Jupyter Notebooks & Logs ---
+.ipynb_checkpoints/
+logs/
+*.log
+mlruns/
+wandb/
+
+# --- IDE & OS Specific (macOS) ---
+.DS_Store
+.AppleDouble
+.LSOverride
+.vscode/
+.idea/
+*.swp
